@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getApiUrl } from "../config";
 
 function FileAnalysisPage() {
   const navigate = useNavigate();
@@ -98,10 +99,10 @@ function FileAnalysisPage() {
       });
 
       console.log("FormData created, sending to backend..."); // Debug log
-      console.log("Backend URL: http://localhost:5000/api/analyze"); // Debug log
+      console.log("Backend URL:", getApiUrl('/api/analyze')); // Debug log
 
       // Send to backend
-      const response = await fetch('http://localhost:5000/api/analyze', {
+      const response = await fetch(getApiUrl('/api/analyze'), {
         method: 'POST',
         body: formData,
         // Add headers to help with CORS

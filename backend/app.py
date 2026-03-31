@@ -2,16 +2,47 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import os
 import shutil
+from typing import List
 
 from analyzer import run_cnn_analysis, run_cnn_analysis_with_temperature_range
 from report_generator import generate_csv, generate_pdf
 from temperature_interpolation import validate_temperature_range
 
-UPLOAD_FOLDER = 'static/uploads'
-OUTPUT_FOLDER = 'static/output'
+# Use absolute paths so deployments work from any working directory.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
+DEFAULT_OUTPUT_FOLDER = os.path.join(BASE_DIR, "static", "output")
+
+UPLOAD_FOLDER = os.environ.get("UPLOAD_FOLDER", DEFAULT_UPLOAD_FOLDER)
+OUTPUT_FOLDER = os.environ.get("OUTPUT_FOLDER", DEFAULT_OUTPUT_FOLDER)
+
+# Public base URL for building download links. If not provided, Flask request.host_url is used.
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").strip().rstrip("/")
+
+cors_origins_env = os.environ.get(
+    "CORS_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000",
+).strip()
+cors_origins: List[str] = [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+
+def build_public_url() -> str:
+    if PUBLIC_BASE_URL:
+        return PUBLIC_BASE_URL
+    return request.host_url.rstrip("/")
+
+# Ensure folders exist for production servers (gunicorn/uwsgi don't run __main__).
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:3000", "http://127.0.0.1:3000"], supports_credentials=True, methods=["GET", "POST", "OPTIONS"])
+# NOTE: keep CORS limited to your frontend origins in production.
+CORS(
+    app,
+    origins=cors_origins,
+    supports_credentials=True,
+    methods=["GET", "POST", "OPTIONS"],
+)
+app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_CONTENT_LENGTH", "50")) * 1024 * 1024  # MB
 
 @app.route('/api/test', methods=['GET', 'OPTIONS'])
 def test_endpoint():
@@ -111,8 +142,8 @@ def analyze_images():
     return jsonify({
         "metrics": analysis_result["metric_data"],
         "transitions": analysis_result["transitions"],
-        "csv_url": request.host_url.rstrip('/') + "/download/csv",
-        "pdf_url": request.host_url.rstrip('/') + "/download/pdf"
+        "csv_url": build_public_url() + "/download/csv",
+        "pdf_url": build_public_url() + "/download/pdf"
     })
 
 @app.route('/api/live-analyze', methods=['POST'])
@@ -154,8 +185,8 @@ def live_analyze():
     return jsonify({
         "metrics": analysis_result["metric_data"],
         "transitions": analysis_result["transitions"],
-        "csv_url": request.host_url.rstrip('/') + "/download/live-csv",
-        "pdf_url": request.host_url.rstrip('/') + "/download/live-pdf"
+        "csv_url": build_public_url() + "/download/live-csv",
+        "pdf_url": build_public_url() + "/download/live-pdf"
     })
 
 @app.route('/api/live-analyze-video', methods=['POST'])
@@ -225,8 +256,8 @@ def live_analyze_video():
     return jsonify({
         "metrics": analysis_result["metric_data"],
         "transitions": analysis_result["transitions"],
-        "csv_url": request.host_url.rstrip('/') + "/download/live-csv",
-        "pdf_url": request.host_url.rstrip('/') + "/download/live-pdf"
+        "csv_url": build_public_url() + "/download/live-csv",
+        "pdf_url": build_public_url() + "/download/live-pdf"
     })
 
 @app.route('/api/analyze-video', methods=['POST'])
@@ -302,8 +333,8 @@ def analyze_video():
         "transitions": analysis_result["transitions"],
         "frame_count": len(frames),
         "temperature_range": f"{start_temp}°C to {end_temp}°C",
-        "csv_url": request.host_url.rstrip('/') + "/download/video-csv",
-        "pdf_url": request.host_url.rstrip('/') + "/download/video-pdf"
+        "csv_url": build_public_url() + "/download/video-csv",
+        "pdf_url": build_public_url() + "/download/video-pdf"
     })
 
 # Keep the old endpoint for backward compatibility
@@ -356,4 +387,6 @@ def download_video_pdf():
 if __name__ == '__main__':
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-    app.run(debug=True)
+    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+    port = int(os.environ.get("PORT", "5000"))
+    app.run(debug=debug, host="0.0.0.0", port=port)

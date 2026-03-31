@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { getApiUrl } from "../config";
 
 function LiveAnalysisPage() {
   const navigate = useNavigate();
@@ -183,7 +184,7 @@ function LiveAnalysisPage() {
           formData.append('temperature', temperature);
         }
         
-        const response = await fetch('http://localhost:5000/api/live-analyze', {
+        const response = await fetch(getApiUrl('/api/live-analyze'), {
           method: 'POST',
           body: formData,
         });
@@ -214,7 +215,7 @@ function LiveAnalysisPage() {
           formData.append('temperature', temperature);
         }
         
-        const response = await fetch('http://localhost:5000/api/live-analyze-video', {
+        const response = await fetch(getApiUrl('/api/live-analyze-video'), {
           method: 'POST',
           body: formData,
         });

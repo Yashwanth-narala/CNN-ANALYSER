@@ -1,0 +1,36 @@
+# Global
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+
+# Python / Backend
+backend/venv/
+backend/__pycache__/
+backend/**/*.pyc
+backend/.pytest_cache/
+
+# Generated analysis data
+backend/static/uploads/
+backend/static/output/
+backend/test_api_images/
+
+# Jupyter / notebooks (if any)
+*.ipynb_checkpoints
+
+# Node / Frontend
+frontend/node_modules/
+frontend/build/
+frontend/.parcel-cache/
+frontend/.cache/
+
+# Environment / secrets
+*.env
+.env.*
+
+# IDE / Editor
+.vscode/
+.idea/
+*.iml
+

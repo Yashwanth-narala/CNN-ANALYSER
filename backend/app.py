@@ -44,6 +44,13 @@ CORS(
 )
 app.config["MAX_CONTENT_LENGTH"] = int(os.environ.get("MAX_CONTENT_LENGTH", "50")) * 1024 * 1024  # MB
 
+@app.route('/')
+def home():
+    return jsonify({
+        "status": "Backend is running ✅",
+        "message": "Use /api/analyze or /api/live-analyze"
+    })
+
 @app.route('/api/test', methods=['GET', 'OPTIONS'])
 def test_endpoint():
     if request.method == 'OPTIONS':
